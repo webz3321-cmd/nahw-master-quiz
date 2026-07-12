@@ -1,15 +1,27 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { Link } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { loadMode, loadQuestions, saveMode, MODE_LABEL, type Mode } from "@/lib/quiz-store";
+import {
+  loadConfig,
+  loadMode,
+  loadQuestions,
+  saveMode,
+  MODE_LABEL,
+  MODE_SHORT,
+  MODE_THEME,
+  type Mode,
+  type ModeConfig,
+} from "@/lib/quiz-store";
 
 export const Route = createFileRoute("/")({
   component: Index,
 });
 
+const MODES: Mode[] = ["nahwi", "fiqhi", "grammar", "maths"];
+
 function Index() {
   const [mode, setMode] = useState<Mode>("nahwi");
-  const [counts, setCounts] = useState<Record<Mode, number>>({ nahwi: 0, fiqhi: 0 });
+  const [counts, setCounts] = useState<Record<Mode, number>>({ nahwi: 0, fiqhi: 0, grammar: 0, maths: 0 });
+  const [cfg, setCfg] = useState<Record<Mode, ModeConfig> | null>(null);
 
   useEffect(() => {
     setMode(loadMode());
@@ -17,98 +29,92 @@ function Index() {
     setCounts({
       nahwi: qs.filter((q) => q.mode === "nahwi").length,
       fiqhi: qs.filter((q) => q.mode === "fiqhi").length,
+      grammar: qs.filter((q) => q.mode === "grammar").length,
+      maths: qs.filter((q) => q.mode === "maths").length,
     });
+    setCfg(loadConfig());
   }, []);
 
-  const pick = (m: Mode) => {
-    setMode(m);
-    saveMode(m);
-  };
+  const pick = (m: Mode) => { setMode(m); saveMode(m); };
+  const theme = MODE_THEME[mode];
 
   return (
-    <div className="min-h-screen w-full bg-background text-foreground">
-      {/* decorative pattern */}
+    <div
+      className="min-h-screen w-full transition-colors duration-500"
+      style={{ background: theme.bg, color: "oklch(0.97 0.02 90)" }}
+    >
       <div
-        className="pointer-events-none fixed inset-0 opacity-[0.05]"
+        className="pointer-events-none fixed inset-0 opacity-[0.06]"
         style={{
-          backgroundImage:
-            "radial-gradient(circle at 20% 20%, oklch(0.82 0.15 85) 1px, transparent 1px), radial-gradient(circle at 80% 60%, oklch(0.82 0.15 85) 1px, transparent 1px)",
+          backgroundImage: `radial-gradient(circle at 20% 20%, ${theme.dot} 1px, transparent 1px), radial-gradient(circle at 80% 60%, ${theme.dot} 1px, transparent 1px)`,
           backgroundSize: "60px 60px, 90px 90px",
         }}
       />
 
-      <div className="relative mx-auto flex min-h-screen max-w-5xl flex-col px-6 py-10">
+      <div className="relative mx-auto flex min-h-screen max-w-6xl flex-col px-6 py-10">
         <header className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div
-              className="flex h-11 w-11 items-center justify-center rounded-full text-xl font-bold text-primary-foreground"
-              style={{ background: "var(--gradient-gold, linear-gradient(135deg, oklch(0.82 0.15 85), oklch(0.72 0.13 60)))" }}
+              className="flex h-11 w-11 items-center justify-center rounded-full text-xl font-bold"
+              style={{ background: theme.gradient, color: theme.primaryContrast }}
             >
-              ن
+              ✦
             </div>
             <div>
               <div className="text-sm font-semibold tracking-widest" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-                GRAMMAR QUIZ
+                QUIZ PRESENTATIONS
               </div>
-              <div className="text-xs text-muted-foreground">Al-Nahwi · Al-Fiqhi Shafi</div>
+              <div className="text-xs opacity-70">4 modes · 3 rounds each</div>
             </div>
           </div>
           <Link
             to="/admin"
-            className="rounded-full border border-border bg-card/40 px-4 py-1.5 text-xs font-medium text-muted-foreground backdrop-blur hover:text-foreground"
+            className="rounded-full border px-4 py-1.5 text-xs font-medium opacity-80 hover:opacity-100"
+            style={{ borderColor: theme.border }}
           >
             Admin →
           </Link>
         </header>
 
-        <main className="flex flex-1 flex-col items-center justify-center py-16">
-          <div className="mb-6 text-7xl font-bold" style={{ fontFamily: "Amiri, serif" }}>
-            {mode === "nahwi" ? "النحو" : "الفقه"}
+        <main className="flex flex-1 flex-col items-center justify-center py-12">
+          <div className="mb-4 text-7xl font-bold" style={{ fontFamily: "Amiri, serif", color: theme.primary }}>
+            {MODE_SHORT[mode]}
           </div>
-          <h1
-            className="text-center text-4xl font-bold tracking-tight sm:text-5xl"
-            style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-          >
+          <h1 className="text-center text-4xl font-bold tracking-tight sm:text-5xl"
+              style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
             Presentation-Style Quiz
           </h1>
-          <p className="mx-auto mt-4 max-w-lg text-center text-base text-muted-foreground">
-            Pick a mode, press Start, and the slideshow plays itself — each question
-            has its own timer, and the correct answer is revealed with a sound when time runs out.
+          <p className="mx-auto mt-4 max-w-lg text-center text-base opacity-70">
+            Pick a mode, press Start, and the slideshow runs itself — each round has its own
+            questions and timers, and answers reveal with a sound when time is up.
           </p>
 
-          <div className="mt-10 grid w-full max-w-3xl gap-4 sm:grid-cols-2">
-            <ModeCard
-              active={mode === "nahwi"}
-              onClick={() => pick("nahwi")}
-              label={MODE_LABEL.nahwi}
-              tag="MODE 01"
-              count={counts.nahwi}
-            />
-            <ModeCard
-              active={mode === "fiqhi"}
-              onClick={() => pick("fiqhi")}
-              label={MODE_LABEL.fiqhi}
-              tag="MODE 02"
-              count={counts.fiqhi}
-            />
+          <div className="mt-10 grid w-full max-w-4xl gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {MODES.map((m, i) => (
+              <ModeCard
+                key={m}
+                active={mode === m}
+                onClick={() => pick(m)}
+                label={MODE_LABEL[m]}
+                tag={`MODE 0${i + 1}`}
+                count={counts[m]}
+                rounds={cfg ? cfg[m] : null}
+                theme={MODE_THEME[m]}
+              />
+            ))}
           </div>
 
           <Link
             to="/present"
-            className="mt-10 rounded-full px-12 py-5 text-lg font-semibold text-primary-foreground transition hover:scale-105"
-            style={{
-              background: "var(--gradient-gold, linear-gradient(135deg, oklch(0.82 0.15 85), oklch(0.72 0.13 60)))",
-              boxShadow: "var(--shadow-glow, 0 0 40px oklch(0.82 0.15 85 / 0.4))",
-            }}
+            className="mt-10 rounded-full px-12 py-5 text-lg font-semibold transition hover:scale-105"
+            style={{ background: theme.gradient, color: theme.primaryContrast, boxShadow: theme.glow }}
           >
             ▶ Start Presentation
           </Link>
-          <p className="mt-3 text-xs text-muted-foreground">
-            Timer starts the moment the first slide opens.
-          </p>
+          <p className="mt-3 text-xs opacity-70">Timer starts the moment the first slide opens.</p>
         </main>
 
-        <footer className="pt-6 text-center text-xs text-muted-foreground">
+        <footer className="pt-6 text-center text-xs opacity-70">
           {MODE_LABEL[mode]} · {counts[mode]} question{counts[mode] === 1 ? "" : "s"} loaded
         </footer>
       </div>
@@ -117,38 +123,48 @@ function Index() {
 }
 
 function ModeCard({
-  active,
-  onClick,
-  label,
-  tag,
-  count,
+  active, onClick, label, tag, count, rounds, theme,
 }: {
-  active: boolean;
-  onClick: () => void;
-  label: string;
-  tag: string;
-  count: number;
+  active: boolean; onClick: () => void; label: string; tag: string; count: number;
+  rounds: ModeConfig | null;
+  theme: ReturnType<() => typeof MODE_THEME[Mode]> | typeof MODE_THEME[Mode];
 }) {
   return (
     <button
       onClick={onClick}
-      className="rounded-2xl border p-6 text-left backdrop-blur transition hover:scale-[1.02]"
+      className="rounded-2xl border p-5 text-left backdrop-blur transition hover:scale-[1.02]"
       style={{
-        background: active ? "oklch(0.82 0.15 85 / 0.12)" : "oklch(0.22 0.04 165 / 0.5)",
-        borderColor: active ? "var(--primary)" : "var(--border)",
-        boxShadow: active ? "var(--shadow-glow, 0 0 30px oklch(0.82 0.15 85 / 0.3))" : "none",
+        background: active ? theme.panel : "oklch(0 0 0 / 0.25)",
+        borderColor: active ? theme.primary : theme.border,
+        boxShadow: active ? theme.glow : "none",
       }}
     >
       <div className="flex items-center justify-between">
-        <div className="text-xs font-semibold tracking-widest text-primary">{tag}</div>
-        {active && <span className="text-xs font-medium text-primary">SELECTED</span>}
+        <div className="text-[10px] font-semibold tracking-widest" style={{ color: theme.primary }}>{tag}</div>
+        {active && <span className="text-[10px] font-medium" style={{ color: theme.primary }}>SELECTED</span>}
       </div>
-      <div className="mt-3 text-xl font-semibold" style={{ fontFamily: "Amiri, serif" }}>
-        {label}
-      </div>
-      <div className="mt-2 text-sm text-muted-foreground">
-        {count} question{count === 1 ? "" : "s"}
-      </div>
+      <div className="mt-3 text-lg font-semibold leading-tight">{label}</div>
+      <div className="mt-1 text-xs opacity-70">{count} question{count === 1 ? "" : "s"}</div>
+      {rounds && (
+        <div className="mt-3 flex gap-1">
+          {[1, 2, 3].map((r) => {
+            const on = rounds.rounds[r as 1 | 2 | 3].enabled;
+            return (
+              <span
+                key={r}
+                className="rounded-full px-2 py-0.5 text-[10px] font-semibold"
+                style={{
+                  background: on ? theme.primary : "oklch(0 0 0 / 0.3)",
+                  color: on ? theme.primaryContrast : "oklch(0.75 0.02 90)",
+                  opacity: on ? 1 : 0.5,
+                }}
+              >
+                R{r}
+              </span>
+            );
+          })}
+        </div>
+      )}
     </button>
   );
 }
